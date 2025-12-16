@@ -13,15 +13,25 @@ import com.pasteleria.backend.model.User;
 import com.pasteleria.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+
+    public AuthService(UserRepository userRepository,
+                       JwtService jwtService,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager) {
+        this.userRepository = userRepository;
+        this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+    }
 
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
@@ -32,7 +42,12 @@ public class AuthService {
         return new AuthResponse(token);
     }
 
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // Evitar duplicados por email
+        userRepository.findByEmail(request.getEmail()).ifPresent(u -> {
+            throw new RuntimeException("El email ya está registrado");
+        });
         User user = new User(
             request.getNombre(),
             request.getEdad(),

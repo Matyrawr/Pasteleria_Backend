@@ -36,6 +36,10 @@ public class productoService {
         existente.setPrecio(datos.getPrecio());
         existente.setStock(datos.getStock());
         existente.setCategoria(datos.getCategoria());
+        // Actualizar imageUrl si viene definido
+        if (datos.getImageUrl() != null && !datos.getImageUrl().isEmpty()) {
+            existente.setImageUrl(datos.getImageUrl());
+        }
         return repository.save(existente);
     }
 

@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.math.BigDecimal;
 
@@ -49,6 +50,7 @@ class ProductoControllerIntegrationTest {
     }
 
     @Test
+    @WithMockUser(authorities = {"ADMIN"})
     void crearProducto_devuelve201() throws Exception {
         producto nuevo = new producto();
         nuevo.setNombre("Pie de limón");
