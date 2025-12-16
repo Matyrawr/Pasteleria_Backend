@@ -9,6 +9,9 @@ import cl.transbank.webpay.webpayplus.responses.WebpayPlusTransactionCreateRespo
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import com.pasteleria.backend.dto.transbank.CreateTransactionResponse;
+import com.pasteleria.backend.dto.transbank.CommitResponse;
+import com.pasteleria.backend.dto.transbank.StatusResponse;
 
 @Service
 public class TransbankServiceImpl implements TransbankService {
@@ -21,16 +24,32 @@ public class TransbankServiceImpl implements TransbankService {
     }
 
     @Override
-    public String createTransaction() throws Exception {
-        final String buyOrder = "buyOrder-" + UUID.randomUUID().toString();
-        final String sessionId = "sessionId-" + UUID.randomUUID().toString();
-        final double amount = 1000;
-        final String returnUrl = "http://localhost:8080/api/transbank/commit"; // Placeholder
+    public CreateTransactionResponse createTransaction(double amount) throws Exception {
+        // buyOrder max length 26 per Transbank spec
+        String buyOrder = String.valueOf(System.currentTimeMillis()); // 13 digits
+        // Append a short random suffix to avoid collisions, keep <= 26
+        String randomSuffix = String.valueOf(Math.abs(UUID.randomUUID().getMostSignificantBits())).substring(0, 10);
+        buyOrder = (buyOrder + randomSuffix).substring(0, Math.min(26, buyOrder.length() + randomSuffix.length()));
+
+        // sessionId can be longer; use UUID trimmed
+        final String sessionId = ("S" + UUID.randomUUID().toString().replace("-", "")).substring(0, 20);
+        // Use amount provided by cart total (must be numeric CLP)
+        final String returnUrl = "http://localhost:5173/pago/resultado"; // frontend landing page
 
         final WebpayPlusTransactionCreateResponse response = this.tx.create(buyOrder, sessionId, amount, returnUrl);
+        return new CreateTransactionResponse(response.getUrl(), response.getToken());
+    }
 
-        // For a real application, you would redirect the user to response.getUrl()
-        // and provide the token. For this example, we return a string with the details.
-        return "URL: " + response.getUrl() + ", Token: " + response.getToken();
+    @Override
+    public CommitResponse commitTransaction(String token) throws Exception {
+        var commit = this.tx.commit(token);
+        String cardNumber = commit.getCardDetail() != null ? commit.getCardDetail().getCardNumber() : null;
+        return new CommitResponse(commit.getStatus(), commit.getAmount(), commit.getBuyOrder(), cardNumber, commit.getAuthorizationCode());
+    }
+
+    @Override
+    public StatusResponse getTransactionStatus(String token) throws Exception {
+        var status = this.tx.status(token);
+        return new StatusResponse(status.getStatus(), status.getAmount(), status.getBuyOrder());
     }
 }

@@ -26,6 +26,9 @@ public class producto {
     @Column(length = 50)
     private String categoria;
 
+    @Column(length = 255)
+    private String imageUrl;
+
     public producto() {
     }
 
@@ -83,5 +86,13 @@ public class producto {
 
     public void setCategoria(String categoria) {
         this.categoria = categoria;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

@@ -17,8 +17,14 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @CrossOrigin("*")
@@ -128,6 +134,71 @@ public class productoController {
     }
 
     // ============================================================================
+        // POST: SUBIR IMAGEN DE PRODUCTO
+        // ============================================================================
+        @PostMapping("/{id}/imagen")
+        @Operation(
+                        summary = "Subir imagen para un producto",
+                        description = "Carga una imagen y asigna la URL al producto."
+        )
+        public ResponseEntity<producto> subirImagen(
+                        @PathVariable Long id,
+                        @RequestParam("file") MultipartFile file
+        ) {
+                try {
+                        if (file == null || file.isEmpty()) {
+                                return ResponseEntity.badRequest().build();
+                        }
+                        producto p = service.findById(id);
+                        if (p == null) {
+                                return ResponseEntity.notFound().build();
+                        }
+
+                        // Guardar en carpeta local ./uploads
+                        Path uploadDir = Paths.get("uploads");
+                        if (!Files.exists(uploadDir)) {
+                                Files.createDirectories(uploadDir);
+                        }
+                        String ext = org.springframework.util.StringUtils.getFilenameExtension(file.getOriginalFilename());
+                        String filename = UUID.randomUUID().toString() + (ext != null ? ("." + ext) : "");
+                        Path target = uploadDir.resolve(filename);
+                        Files.copy(file.getInputStream(), target);
+
+                        String publicUrl = "/uploads/" + filename;
+                        p.setImageUrl(publicUrl);
+                        producto actualizado = service.update(id, p);
+                        return ResponseEntity.ok(actualizado);
+                } catch (Exception e) {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                }
+        }
+
+        // ============================================================================
+        // POST: ASIGNAR IMAGEN DESDE URL
+        // ============================================================================
+        @PostMapping("/{id}/imagen-url")
+        @Operation(
+                        summary = "Asignar imagen desde URL",
+                        description = "Recibe un JSON con { url } y lo asigna como imageUrl del producto."
+        )
+        public ResponseEntity<producto> asignarImagenDesdeUrl(
+                        @PathVariable Long id,
+                        @RequestBody Map<String, String> body
+        ) {
+                String url = body != null ? body.get("url") : null;
+                if (url == null || url.isBlank()) {
+                        return ResponseEntity.badRequest().build();
+                }
+                producto p = service.findById(id);
+                if (p == null) {
+                        return ResponseEntity.notFound().build();
+                }
+                p.setImageUrl(url);
+                producto actualizado = service.update(id, p);
+                return ResponseEntity.ok(actualizado);
+        }
+
+        // ============================================================================
     // DELETE: ELIMINAR PRODUCTO
     // ============================================================================
     @DeleteMapping("/{id}")
